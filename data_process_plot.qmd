@@ -1,0 +1,498 @@
+---
+title: "Untitled"
+format: html
+---
+
+1.Data Clean
+```{python}
+#import required packages
+import os
+import pandas as pd
+import altair as alt
+import time
+import json
+```
+
+```{python}
+#read Chicago crash data
+path = r'/Users/kongzidan/Documents/GitHub/ppha_30538_final_project/data_folder'
+path_crash = os.path.join(path, 'Traffic_Crashes_-_Crashes_20241202.csv')
+df_crash = pd.read_csv(path_crash)
+```
+```{python}
+#read chciago people data
+path_people = os.path.join(path,'Traffic_Crashes_-_People_20241202.csv')
+df_people = pd.read_csv(path_people)
+```
+
+```{python}
+#read DC crash data
+path_dc = os.path.join(path, 'Crashes_in_DC.csv')
+df_dc = pd.read_csv(path_dc)
+```
+
+keep only wanted column
+```{python}
+#only leave columns that are needed
+df_people = df_people[['PERSON_ID', 'PERSON_TYPE', 'CRASH_RECORD_ID', 'VEHICLE_ID',
+                       'CRASH_DATE', 'CITY', 'STATE', 'ZIPCODE', 'SEX', 'AGE',
+                      'DRIVERS_LICENSE_STATE', 'DRIVERS_LICENSE_CLASS', 'SAFETY_EQUIPMENT',
+                       'AIRBAG_DEPLOYED']]
+df_crash = df_crash.drop(columns=['LANE_CNT', 'PHOTOS_TAKEN_I', 'STATEMENTS_TAKEN_I',
+                         'DOORING_I', 'WORK_ZONE_I', 'WORK_ZONE_TYPE', 'WORKERS_PRESENT_I'])
+```
+
+merge 2 data based on "crash_record_id"
+
+```{python}
+#merge Chicago's crash and people data
+merged_df = pd.merge(df_crash, df_people, on=[
+                     'CRASH_RECORD_ID', 'CRASH_DATE'], how='inner')
+```
+
+we investigate the traffic situation in 5 years period, start with 2019.  
+```{python}
+#format Chicago report date column
+df_crash['CRASH_DATE'] = pd.to_datetime(
+    df_crash['CRASH_DATE'], format="%m/%d/%Y %I:%M:%S %p", errors='coerce')
+#select data afte 2019
+df_crash_2019 = df_crash[df_crash['CRASH_DATE'] >= '2019-01-01']
+#format DC report date column and select data after 2019
+df_dc['REPORTDATE'] = pd.to_datetime(df_dc['REPORTDATE'], errors='coerce')
+df_dc_2019 = df_dc[df_dc['REPORTDATE'] >= '2019-01-01']
+```
+Referencing chatgpt for the specific time format.
+```{python}
+#format Chicago report date column and select data after 2019
+df_people['CRASH_DATE'] = pd.to_datetime(
+    df_people['CRASH_DATE'], format="%m/%d/%Y %I:%M:%S %p", errors='coerce')
+df_people_2019 = df_people[df_people['CRASH_DATE'] >= '2019-01-01']
+#format merge data's report date and select data after 2019
+merged_df['CRASH_DATE'] = pd.to_datetime(
+    merged_df['CRASH_DATE'], format="%m/%d/%Y %I:%M:%S %p", errors='coerce')
+df_merged_2019 = merged_df[merged_df['CRASH_DATE'] >= '2019-01-01']
+```
+
+```{python}
+#save csv to path
+merge_path= r'/Users/kongzidan/Documents/GitHub/ppha_30538_final_project/data_folder/df_merged_2019.csv'
+df_merged_2019.to_csv(merge_path, index=False)
+```
+
+2. Explore Data
+
+a. find the crash pattern in month unit, week unit and hour unit:
+```{python}
+#value counts to find frequency on month, week and daily basis
+month_counts = df_crash_2019['CRASH_MONTH'].value_counts(
+).sort_values(ascending=False)
+day_counts = df_crash_2019['CRASH_DAY_OF_WEEK'].value_counts(
+).sort_values(ascending=False)
+hour_counts = df_crash_2019['CRASH_HOUR'].value_counts(
+).sort_values(ascending=False)
+print(month_counts)
+print(day_counts)
+print(hour_counts.head(5))
+```
+
+The crashes happen more frequently in month May~October.
+The crashes happen more frequently in weekend.
+The crashes happen more frequently in afternoon from 14~18pm.
+
+b. find out the sexual indentidy influence
+```{python}
+# filter dataframe for drivers in crashes
+df_drivers = df_merged_2019.loc[df_merged_2019['PERSON_TYPE'] == 'DRIVER']
+#get crash counts for each sex catgory as driver
+identity_counts = df_drivers['SEX'].value_counts().sort_values(ascending=False)
+print(identity_counts)
+```
+
+Males have the most counts on crashes as driver.
+
+c. find out age impact
+
+```{python}
+#filter age, delete unrealistic value
+df_drivers_age = df_drivers[(df_drivers['AGE'] > 0)
+                            & df_drivers['AGE'].notna()]
+#categorize age in dataset
+bins = [0, 12, 18, 40, 65, float('inf')]
+labels = ['Children (<12)', 'Teenagers (12-18)', 'Young Adults (18-40)',
+          'Middle Adults (40-65)', 'Old Adults (>65)']
+df_drivers_age.loc[:, 'AGE_GROUP'] = pd.cut(
+    df_drivers_age['AGE'], bins=bins, labels=labels, right=False)
+```
+Referencing chatgpt for mapping age to age group in the dataset.
+
+```{python}
+#get crash counts for each age group
+age_counts = df_drivers_age['AGE_GROUP'].value_counts(
+).sort_values(ascending=False)
+print(age_counts)
+```
+
+```{python}
+#select only age range between 6-12 years old, solve potentially wrong age value 
+df_age_12 = df_drivers_age[(df_drivers_age['AGE'] > 6)
+                           & (df_drivers_age['AGE'] < 12)]
+print(len(df_age_12))
+```
+
+Young adults are the type that involves in most of the crashes, we can see from the data that even children can been the driver in a car crash, which reveal the importance of improving our traffic restriction.
+
+3. plotting:
+
+time seires of count:
+```{python}
+#name each obeservation with city in the dateset
+df_crash_2019['city'] = 'Chicago'
+df_dc_2019['city'] = 'DC'
+#format date column
+df_dc_2019['REPORTDATE'] = pd.to_datetime(
+    df_dc_2019['REPORTDATE'], errors='coerce')
+#rename column for merge
+df_dc_2019.rename(columns={'REPORTDATE': 'CRASH_DATE'}, inplace=True)
+#transfer date to month level to get monthly crash count for plotting
+df_crash_2019['CRASH_MONTH_plot'] = df_crash_2019['CRASH_DATE'].dt.to_period(
+    'M')
+df_dc_2019['CRASH_MONTH_plot'] = df_dc_2019['CRASH_DATE'].dt.to_period('M')
+```
+
+```{python}
+#concat Chicago and DC dataset
+dc_chi_df = pd.concat([df_crash_2019, df_dc_2019])
+```
+```{python}
+#save csv to path
+concat_path= r'/Users/kongzidan/Documents/GitHub/ppha_30538_final_project/data_folder/df_chi_dc.csv'
+dc_chi_df.to_csv(concat_path, index=False)
+```
+
+```{python}
+print(dc_chi_df['city'].value_counts())
+```
+```{python}
+#groupby get crash counts for both city on monthly basis
+monthly_counts = dc_chi_df.groupby(
+    ['city', 'CRASH_MONTH_plot']).size().reset_index(name='Crash_Count')
+#format for plot with altair
+monthly_counts['CRASH_MONTH_plot'] = monthly_counts['CRASH_MONTH_plot'].dt.to_timestamp()
+
+#create per capita crash counts column
+population_chicago = 2638159
+population_dc = 681683
+population_dict = {'Chicago': population_chicago, 'DC': population_dc}
+monthly_counts['Population'] = monthly_counts['city'].map(population_dict)
+monthly_counts['Per_Capita_Crash'] = monthly_counts['Crash_Count'] / monthly_counts['Population']
+print(monthly_counts)
+```
+Refencing chatgpt for mapping city to population.
+
+```{python}
+#plot Chicago and DC monthly crash counts for past five years
+time_series_chart = alt.Chart(monthly_counts).mark_line(point=True).encode(
+    x=alt.X('CRASH_MONTH_plot:T', title='Month', axis=alt.Axis(
+            format='%Y-%b', labelAngle=-45)),
+    y=alt.Y('Crash_Count:Q', title='Crash Counts'),
+    color=alt.Color('city:N', title='City'),
+).properties(
+    title='Monthly Crash Counts for Chicago and DC',
+    width=800,
+    height=400
+)
+
+time_series_chart
+```
+
+per capita:
+```{python}
+#plot Chicago and DC monthly per cpaita crash counts for past five years
+time_capita_chart = alt.Chart(monthly_counts).mark_line(point=True).encode(
+    x=alt.X('CRASH_MONTH_plot:T', title='Month', axis=alt.Axis(
+            format='%Y-%b', labelAngle=-45)),
+    y=alt.Y('Per_Capita_Crash:Q', title='Crash Counts Per Capita'),
+    color=alt.Color('city:N', title='City'),
+).properties(
+    title='Monthly Crash Counts for Chicago and DC Per Capita',
+    width=800,
+    height=400
+)
+
+time_capita_chart
+```
+
+damage level with gender:
+```{python}
+# group by gender of drivers in crashes and damage Level
+damage_data = df_drivers.groupby(
+    ['SEX', 'DAMAGE']).size().reset_index(name='Count')
+#draw stacked bar chart for damage level on gender types
+stacked_bar_chart = alt.Chart(damage_data).mark_bar().encode(
+    x=alt.X('DAMAGE:N', title='Damage Level'),
+    y=alt.Y('Count:Q', title='Count'),
+    color=alt.Color('SEX:N', title='SEX')
+).properties(
+    title='Stacked Bar Chart of Damage Levels by Gender',
+    width=600,
+    height=400
+)
+
+stacked_bar_chart
+```
+
+injury and lighting condition
+```{python}
+#group by get crash counts for each lighting condition 
+light_counts = df_crash_2019['LIGHTING_CONDITION'].value_counts().reset_index()
+light_counts.columns = ['LIGHTING_CONDITION', 'Count']
+light_counts = light_counts.sort_values(by='Count', ascending=False)
+# draw crash counts plot based on lighting condition
+bar_chart_light = alt.Chart(light_counts).mark_bar().encode(
+    x=alt.X('LIGHTING_CONDITION:N', title='Lightening Condition Type',
+            sort=light_counts['LIGHTING_CONDITION'].tolist()),
+    y=alt.Y('Count:Q', title='Count'),
+    color=alt.Color('LIGHTING_CONDITION:N', legend=None)
+).properties(
+    title='Crash Counts by Lightening Condition',
+    width=800,
+    height=400
+)
+
+bar_chart_light
+```
+```{python}
+#get average injury rate based on lighting condition
+grouped_light = df_crash_2019.groupby('LIGHTING_CONDITION')[
+    'INJURIES_TOTAL'].mean().reset_index()
+grouped_light.rename(columns={'INJURIES_TOTAL': 'Avg_Injuries'}, inplace=True)
+
+#draw graph of average injury rate based on lighting condition
+scatter_light = alt.Chart(grouped_light).mark_circle(size=200).encode(
+    x=alt.X('LIGHTING_CONDITION:N', title='Lighting Condition'),
+    y=alt.Y('Avg_Injuries:Q', title='Average Number of Injuries'),
+    color=alt.Color('LIGHTING_CONDITION:N', legend=None)
+).properties(
+    title='Average Injuries by Lighting Condition',
+    width=600,
+    height=400
+)
+
+scatter_light
+```
+
+```{python}
+#get average fatal rate based on lighting condition
+grouped_light_fatal = df_crash_2019.groupby('LIGHTING_CONDITION')[
+    'INJURIES_FATAL'].mean().reset_index()
+grouped_light_fatal.rename(
+    columns={'INJURIES_FATAL': 'Avg_FATAL'}, inplace=True)
+
+#draw average fatal rate based on lighting condition
+scatter_light_fatal = alt.Chart(grouped_light_fatal).mark_circle(size=200).encode(
+    x=alt.X('LIGHTING_CONDITION:N', title='Lighting Condition'),
+    y=alt.Y('Avg_FATAL:Q', title='Average Number of Fatal'),
+    color=alt.Color('LIGHTING_CONDITION:N', legend=None)
+).properties(
+    title='Average Fatal by Lighting Condition',
+    width=600,
+    height=400
+)
+
+scatter_light_fatal
+```
+
+seat belt:
+```{python}
+#get average injury rate based on safety equipment wear condition
+grouped_seatbelt = df_merged_2019.groupby('SAFETY_EQUIPMENT')[
+    'INJURIES_TOTAL'].mean().reset_index()
+grouped_seatbelt.rename(
+    columns={'INJURIES_TOTAL': 'Avg_Injuries'}, inplace=True)
+
+#draw average injury rate based on safety equipment wear condition
+scatter_seatbelt = alt.Chart(grouped_seatbelt).mark_circle(size=200).encode(
+    x=alt.X('SAFETY_EQUIPMENT:N', title='Safety Equipment'),
+    y=alt.Y('Avg_Injuries:Q', title='Average Number of Injuries'),
+    color=alt.Color('SAFETY_EQUIPMENT:N', legend=None)
+).properties(
+    title='Average Injuries by Safety Equipment',
+    width=600,
+    height=400
+)
+
+scatter_seatbelt
+```
+```{python}
+#get average fatal rate based on safety equipment wear condition
+grouped_belt_fatal = df_merged_2019.groupby('SAFETY_EQUIPMENT')[
+    'INJURIES_FATAL'].mean().reset_index()
+grouped_belt_fatal.rename(
+    columns={'INJURIES_FATAL': 'Avg_FATAL'}, inplace=True)
+
+#draw average fatal rate based on safety equipment wear condition
+scatter_belt_fatal_plot = alt.Chart(grouped_belt_fatal).mark_circle(size=200).encode(
+    x=alt.X('SAFETY_EQUIPMENT:N', title='Safety Equipment'),
+    y=alt.Y('Avg_FATAL:Q', title='Average Number of Fatal'),
+    color=alt.Color('SAFETY_EQUIPMENT:N', legend=None)
+).properties(
+    title='Average Fatal by Safety Equipment',
+    width=600,
+    height=400
+)
+
+scatter_belt_fatal_plot
+```
+
+roadway surface condition:
+```{python}
+##get crash counts based on roadway surface condition
+road_counts = df_crash_2019['ROADWAY_SURFACE_COND'].value_counts(
+).reset_index()
+road_counts.columns = ['ROADWAY_SURFACE_COND', 'Count']
+road_counts = road_counts.sort_values(by='Count', ascending=False)
+# draw crash counts based on roadway surface condition
+bar_chart_road = alt.Chart(road_counts).mark_bar().encode(
+    x=alt.X('ROADWAY_SURFACE_COND:N', title='Roadway Surface Type',
+            sort=road_counts['ROADWAY_SURFACE_COND'].tolist()),
+    y=alt.Y('Count:Q', title='Count'),
+    color=alt.Color('ROADWAY_SURFACE_COND:N', legend=None)
+).properties(
+    title='Crash Counts by Roadway Surface Condition',
+    width=800,
+    height=400
+)
+
+bar_chart_road
+```
+```{python}
+#get average injury rate based on roadway surface condition
+grouped_roadway = df_crash_2019.groupby('ROADWAY_SURFACE_COND')[
+    'INJURIES_TOTAL'].mean().reset_index()
+grouped_roadway.rename(
+    columns={'INJURIES_TOTAL': 'Avg_Injuries'}, inplace=True)
+
+#get average injury rate based on roadway surface condition
+grouped_roadway = alt.Chart(grouped_roadway).mark_circle(size=200).encode(
+    x=alt.X('ROADWAY_SURFACE_COND:N', title='Roadway Surface Ccondition'),
+    y=alt.Y('Avg_Injuries:Q', title='Average Number of Injuries'),
+    color=alt.Color('ROADWAY_SURFACE_COND:N', legend=None)
+).properties(
+    title='Average Injuries by Road Surface Condition',
+    width=600,
+    height=400
+)
+
+grouped_roadway
+```
+```{python}
+#get average fatal rate based on roadway surface condition
+grouped_road_fatal = df_crash_2019.groupby('ROADWAY_SURFACE_COND')[
+    'INJURIES_FATAL'].mean().reset_index()
+grouped_road_fatal.rename(
+    columns={'INJURIES_FATAL': 'Avg_FATAL'}, inplace=True)
+#draw average fatal rate based on roadway surface condition
+scatter_road_fatal_plot = alt.Chart(grouped_road_fatal).mark_circle(size=200).encode(
+    x=alt.X('ROADWAY_SURFACE_COND:N', title='Roadway Surface Ccondition'),
+    y=alt.Y('Avg_FATAL:Q', title='Average Number of Fatal'),
+    color=alt.Color('ROADWAY_SURFACE_COND:N', legend=None)
+).properties(
+    title='Average Fatal by Roadway Surface Ccondition',
+    width=600,
+    height=400
+)
+
+scatter_road_fatal_plot
+```
+
+
+prim type:
+```{python}
+#get crash counts for each primary crash reason
+type_counts = df_crash_2019['PRIM_CONTRIBUTORY_CAUSE'].value_counts(
+).reset_index()
+type_counts.columns = ['PRIM_CONTRIBUTORY_CAUSE', 'Count']
+type_counts = type_counts.sort_values(by='Count', ascending=False)
+#draw crash counts for each primary crash reason
+bar_chart_type = alt.Chart(type_counts).mark_bar().encode(
+    x=alt.X('PRIM_CONTRIBUTORY_CAUSE:N', title='Type',
+            sort=type_counts['PRIM_CONTRIBUTORY_CAUSE'].tolist()),
+    y=alt.Y('Count:Q', title='Count'),
+    color=alt.Color('PRIM_CONTRIBUTORY_CAUSE:N', legend=None)
+).properties(
+    title='Distribution of Primary Type of Causation',
+    width=800,
+    height=400
+)
+
+bar_chart_type
+```
+Refencing chatgpt for sorting value in graphing.
+
+```{python}
+#get average injury rate for each primary crash reason
+grouped_type = df_crash_2019.groupby('PRIM_CONTRIBUTORY_CAUSE')[
+    'INJURIES_TOTAL'].mean().reset_index()
+grouped_type.rename(columns={'INJURIES_TOTAL': 'Avg_Injuries'}, inplace=True)
+grouped_type_sorted = grouped_type.sort_values(
+    by='Avg_Injuries', ascending=False)
+
+#draw average injury rate for each primary crash reason
+grouped_type_plot = alt.Chart(grouped_type_sorted).mark_bar().encode(
+    x=alt.X('PRIM_CONTRIBUTORY_CAUSE:N', title='Type',
+            sort=grouped_type_sorted['PRIM_CONTRIBUTORY_CAUSE'].tolist()),
+    y=alt.Y('Avg_Injuries:Q', title='Average Number of Injuries'),
+    color=alt.Color('PRIM_CONTRIBUTORY_CAUSE:N', legend=None)
+).properties(
+    title='Average Injuries by Primary Type of Causation',
+    width=800,
+    height=400
+)
+
+grouped_type_plot
+```
+
+geo_graph
+```{python}
+#select a time raneg after 2024 and select primary reason of 'EQUIPMENT - VEHICLE CONDITION' for geo plot
+df_2024_geo = df_crash_2019[(df_crash_2019['CRASH_DATE'] >= '2024-01-01') & (
+    df_crash_2019['PRIM_CONTRIBUTORY_CAUSE'] == 'EQUIPMENT - VEHICLE CONDITION')]
+#drop na in location
+df_2024_geo = df_2024_geo.dropna(subset=['LOCATION'])
+
+```
+
+
+```{python}
+#creat bins for longitude and latitude
+step = 0.01
+# create bins
+df_2024_geo['latBin'] = (df_2024_geo['LATITUDE'] // step) * step
+df_2024_geo['lonBin'] = (df_2024_geo['LONGITUDE'] // step) * step
+# group by bins
+bin_groups = df_2024_geo.groupby(
+    ['latBin', 'lonBin']).size().reset_index(name='count')
+
+file_path = "/Users/kongzidan/Documents/GitHub/ppha_30538_final_project/Boundaries - Neighborhoods.geojson"
+# ----
+with open(file_path) as f:
+    chicago_geojson = json.load(f)
+
+# get geo_data
+geo_data = alt.Data(values=chicago_geojson["features"])
+#draw geo background
+background = alt.Chart(geo_data).mark_geoshape(
+    fill='lightgray',
+    stroke='white'
+).project('albersUsa')
+# draw points layer
+points = alt.Chart(bin_groups).mark_circle().encode(
+    longitude='lonBin:Q',
+    latitude='latBin:Q',
+    size=alt.Size('count:Q', title='Crash counts',
+                  scale=alt.Scale(domain=[0, 20000], range=[10, 500])),
+).properties(
+    title='Traffic Crashes in Chicago'
+)
+background+points
+```
