@@ -1,6 +1,6 @@
 ---
-title: "Coding & Plotting for Final Reproducible Research"
-author: "Zidan Kong & Boya Lin" 
+title: "30538 Final Project: Reproducible Research"
+author: "Zidan Kong, Boya Lin, and Sijie Wu" 
 format: html
 ---
 
@@ -33,6 +33,9 @@ df_crash = pd.read_csv(chicago_crash_file)
 df_people = pd.read_csv(chicago_people_file)
 # read DC crash data
 df_dc = pd.read_csv(dc_crash_file)
+
+# Note: since the data files are too large, we cannot upload to git
+# Drive link for all datasets (including both initial, unmodified dataframes we download and the final versions of the dataframe(s)): https://drive.google.com/drive/folders/1tsSsifhK4LLAWtzXqsEb91gDD3ShDvNx?usp=sharing 
 ```
 
 ```{python}
