@@ -1,12 +1,98 @@
 ---
 title: "30538 Final Project: Reproducible Research"
-author: "Zidan Kong, Boya Lin, and Sijie Wu" 
-format: html
+author: "Zidan Kong (ZidanKONG), Boya Lin (boyalin), and Sijie Wu (sijiewu12) (All from Secion 1)" 
+format: 
+#    html: 
+#        code-overflow: wrap
+    pdf:
+        include-in-header: 
+            text: |
+              \usepackage{fvextra}
+              \usepackage[top=1cm, bottom=1cm, left=1.91cm, right=1.91cm]{geometry}
+              \DefineVerbatimEnvironment{Highlighting}{Verbatim}{breaklines,commandchars=\\\{\}}
+              \fontsize{10pt}{12pt}\selectfont
+include-before-body:
+    text: |
+      \RecustomVerbatimEnvironment{verbatim}{Verbatim}{
+        showspaces = false,
+        showtabs = false,
+        breaksymbolleft={},
+        breaklines
+        }
+header-includes:
+  - \usepackage{titling}
+  - \preauthor{\begin{center}\footnotesize}  
+  - \postauthor{\end{center}}
+warning: false
+pdf-engine: xelatex
+execute:
+  cache: false
+  echo: false       
+  eval: false       
+  filters: 
+  - include-code-files
+jupyter: python3
 ---
 
-# 1. Cleaning Data
+## 1. Introduction
+**Research Question**: What are the most significant factors contributing to traffic crashes in Chicago?
+
+**Data**: We use crashes and people data from Chicago Data Portal in the year 2013-2024, and use crashes data from Open Data DC in the year 1899-2024. Moreover, we extract text data by web-scraping from Chicago and DC news websites respectively.
+
+**Motivation**: Traffic crashes are a persistent issue in urban environments, posing risks to public safety and city infrastructure. By comparing monthly crash counts per-capita in Chicago with those in Washington, D.C, we find more undesirable traffic crash performance in Chicago. This analysis investigates the factors contributing to traffic crashes in Chicago. Using a combination of time series data, demographic indicators, Shiny App, and text analysis, the study aims to identify patterns and propose actionable recommendations to reduce traffic accidents.
+
+**Approach**:  The research combines multiple datasets, including crash details, drivers' information, primary causes and demographic data. We did two merges. The first merge is for Chicago and D.C. crash datasets by date. The second merge for Chicago crash data wth people involved in crashes was analyzed for insights on age, gender, and contributory behaviors. We focus the past five years data of Chicago crashes for plotting, while including all years for Shiny App presentation. We also conducted the text analysis from 200 news articles to provide context for public sentiment.
+
+**Difficulties**: Challenges include managing large amount of indeterminate crash categories and missing data. For example, if we have missing data in latitude or longitude columns, we won't be able to use the observation for geo-map plotting at all. 
+
+## 2. Cross-city Comparison between Chicago and Washington D.C.
+
+**Time Series**: We have two takeawyas here: (1) Chicago has higher monthly crash counts per capita over the past five years in contrast with D.C.. (2) Both Chicago and D.C. display seasonal pattern, with most crashes happening during summer season. 
+
+![](graphs/Chart1_comparison_time_series.png){width=600px height=200px fig-align="center"}
+
+**Text Analysis**: News articles of Chicago display lower polarity and subjectivity based on the past 100 news articles.
+
+![](graphs/Chart2_Chicago_text_analysis.png){width=300px height=120px}  ![](graphs/Chart3_DC_text_analysis.png){width=300px height=120px}
+
+Overall, Chicago shows a more undesirable crash performance comapred to DC on per-capita level. It indicates the significance of evaluating the causations and potential improvements for Chicago.
+
+## 3. Deep Dive into Chicago
+**Time Patterns Summary**: Our analysis of the data reveals that traffic crashes in Chicago are most frequent during October, July, and June, with the highest risk occurring on weekends (Friday through Sunday) and during late afternoon hours (3 PM to 5 PM).
+
+**Gender & Age Indicators**:  Male drivers and young adult drivers aged 18–40 are disproportionately involved in crashes, underscoring a demographic risk group. From the data, we also find that there were even young drivers who were in age range between 6-12 years old involved in the crash. 
+
+![](graphs/Chart4_bar_chart_of_damage_level_by_gender.png){width=300px height=200px} ![](graphs/Chart5_primary_type_of_causation.png){width=300px height=200px}
+
+**Primary Contributory Causations**: (1) Major causes include failing to yield right-of-way and following too closely. (2) Other critical issues include disregarding traffic signals and improper driving actions, such as incorrect turning and lane usage.
+
+**Average Injury Rates by Type & Surface Condition**: (1) Three main causations of injuries are Motorcycle advancing legally on red light, Disregarding traffic signals, and Disregarding other traffic signals. (2) For roadway surface condition, in addition to dry surface condition, wet and icy roadway surfaces were associated with relative higher injury rate in crashes.
+
+![](graphs/Chart6_injuries_by_causation.png){width=300px height=200px} ![](graphs/Chart7_injuries_by_road_surface_condition.png){width=300px height=200px}
+
+## 4. Shiny App
+
+For our Shiny App, we streamlined over 40 primary causations into 10 broader categories to create a more user-friendly interface. A dropdown menu allows users to select all 10 causes or focus on a specific one. Additionally, a timeline slider filters data by year (2013–2024), and a toggle button lets users choose between a single year or a range of years.
+
+When a range of years is selected, the app displays two plots: a geo-map on the left and a line chart on the right. The left panel features a geo-map showing traffic crash distributions within Chicago, where each dot represents a crash location, with size and color indicating crash density. When all causes are selected, most crashes are concentrated in downtown Chicago. The right panel shows a line chart tracking crash trends over the selected period, helping users identify patterns and changes in crash counts across categories.
+
+If a single year is selected, only the geo-map is displayed, as there is no time range for comparison, and the time-series graph automatically disappears, as there's no time range to compare. 
+
+![](graphs/Chart8_shiny1.png){width=400px height=300px} ![](graphs/Chart9_shiny2.png){width=200px height=300px}
+
+## 5. Conclusion with Policy Recommendations & Future Research Directions
+
+**Key Insights**: (1) Peak Seasons and Times: Traffic crashes are more frequent during late afternoons and weekends. (2) Top Crash Contributors: unsafe and aggressive driving, incorrect driving actions (i.e., improper turning/no signal, improper lane use), and failure to yield right-of-way
+
+**Policy Recommendations**: (1) Implement targeted traffic control and guidance during peak crash times and high-risk locations. (2) Strengthen enforcement of aggressive driving and right-of-way laws with higher fines and immediate ticketing. (3) Promote public awareness through radio programs and social campaigns
+Adding crosswalks, bike lanes, motorcycle lanes, and signals at high-crash areas. (4) Prioritize road maintenance, provide real-time traffic updates (with radios) and guidance for hazardous conditions. (5) Enforce stricter age restrictions to prevent underage driving
+
+**Future Research Directions**: (1) Investigate Speeding: Use more comprehensive and updated data sources to conduct further research on the role of speeding in traffic crashes. (2) Impact of Fines and Enforcement: Examine how different levels of fines and enforcement impact traffic safety and driver behavior.
+
+Note: Our detailed codes are provided below. 
 
 ```{python}
+# 1. Cleaning Data
 # import required packages
 import os
 import pandas as pd
@@ -57,9 +143,8 @@ merged_df = pd.merge(df_crash, df_people, on=[
                      'CRASH_RECORD_ID', 'CRASH_DATE'], how='inner')
 ```
 
-For the purpose of plotting, we'll investigate the traffic situation in 5 years period, start with 2019.  
-
 ```{python}
+# For the purpose of plotting, we'll investigate the traffic situation in 5 years period, start with 2019.
 # format Chicago report date column
 df_crash['CRASH_DATE'] = pd.to_datetime(
     df_crash['CRASH_DATE'], format="%m/%d/%Y %I:%M:%S %p", errors='coerce')
@@ -91,11 +176,10 @@ merge_path= r'/Users/boyalin/Documents/GitHub/ppha30538_ps/ppha30538_final_proje
 df_merged_after_2019.to_csv(merge_path, index=False)
 ```
 
-# 2. Exploring Data
-
-## a. find the crash pattern in month unit, week unit and hour unit:
 
 ```{python}
+# 2. Exploring Data
+## a. find the crash pattern in month unit, week unit and hour unit:
 # value counts to find frequency on month, week and daily basis
 month_counts = df_crash_2019['CRASH_MONTH'].value_counts(
 ).sort_values(ascending=False)
@@ -106,28 +190,26 @@ hour_counts = df_crash_2019['CRASH_HOUR'].value_counts(
 print(month_counts)
 print(day_counts)
 print(hour_counts.head(5))
+
+# The crashes happen more frequently in month May~October.
+# The crashes happen more frequently in weekend.
+# The crashes happen more frequently in afternoon from 14~18pm.
 ```
 
-The crashes happen more frequently in month May~October.
-The crashes happen more frequently in weekend.
-The crashes happen more frequently in afternoon from 14~18pm.
-
-## b. find out the sexual indentidy influence
-
 ```{python}
+## b. find out the sexual indentidy influence
 # filter dataframe for drivers in crashes
-df_drivers = df_merged_2019.loc[df_merged_2019['PERSON_TYPE'] == 'DRIVER']
+df_drivers = df_merged_after_2019.loc[df_merged_after_2019['PERSON_TYPE'] == 'DRIVER']
 # get crash counts for each sex catgory as driver
 identity_counts = df_drivers['SEX'].value_counts().sort_values(ascending=False)
 
 print(identity_counts)
+
+# Males have the most counts on crashes as driver.
 ```
 
-Males have the most counts on crashes as driver.
-
-## c. find out age impact
-
 ```{python}
+## c. find out age impact
 # filter age, delete unrealistic value
 df_drivers_age = df_drivers[(df_drivers['AGE'] > 0)
                             & df_drivers['AGE'].notna()]
@@ -153,13 +235,13 @@ print(age_counts)
 df_age_12 = df_drivers_age[(df_drivers_age['AGE'] > 6)
                            & (df_drivers_age['AGE'] < 12)]
 print(len(df_age_12))
+
+# Young adults are the type that involves in most of the crashes, we can see from the data that even children can been the driver in a car crash, which reveal the importance of improving our traffic restriction.
 ```
 
-Young adults are the type that involves in most of the crashes, we can see from the data that even children can been the driver in a car crash, which reveal the importance of improving our traffic restriction.
-
-# 3. Plotting
 
 ```{python}
+# 3. Plotting
 # prepare data for cross-city comparison
 # name each obeservation with city in the dateset
 df_crash_2019['city'] = 'Chicago'
@@ -195,7 +277,7 @@ print(df_chicago_dc['city'].value_counts())
 
 ```{python}
 # groupby get crash counts for both city on monthly basis
-monthly_counts = dc_chi_df.groupby(
+monthly_counts = df_chicago_dc.groupby(
     ['city', 'CRASH_MONTH_plot']).size().reset_index(name='Crash_Count')
 # format for plot with altair
 monthly_counts['CRASH_MONTH_plot'] = monthly_counts['CRASH_MONTH_plot'].dt.to_timestamp()
@@ -212,9 +294,10 @@ print(monthly_counts)
 # Refencing chatgpt for mapping city to population.
 ```
 
-### Time Seires of Monthly Total Crash Counts for Chicago & DC
+
 
 ```{python}
+# Time Seires of Monthly Total Crash Counts for Chicago & DC
 # plot Chicago and DC monthly crash counts for past five years
 time_series_chart = alt.Chart(monthly_counts).mark_line(point=True).encode(
     x=alt.X('CRASH_MONTH_plot:T', title='Month', axis=alt.Axis(
@@ -230,10 +313,9 @@ time_series_chart = alt.Chart(monthly_counts).mark_line(point=True).encode(
 time_series_chart
 ```
 
-### Time Seires of Monthly Crash Counts per Capita for Chicago & DC
-We added this new plot based on the feedback we received from our classmate in the in-class presentation, which would provide a more comparative view.
-
 ```{python}
+# Time Seires of Monthly Crash Counts per Capita for Chicago & DC
+# We added this new plot based on the feedback we received from our classmate in the in-class presentation, which would provide a more comparative view.
 # plot Chicago and DC monthly per cpaita crash counts for past five years
 time_capita_chart = alt.Chart(monthly_counts).mark_line(point=True).encode(
     x=alt.X('CRASH_MONTH_plot:T', title='Month', axis=alt.Axis(
@@ -249,9 +331,8 @@ time_capita_chart = alt.Chart(monthly_counts).mark_line(point=True).encode(
 time_capita_chart
 ```
 
-###  Damage Levels by Gender
-
 ```{python}
+# Damage Levels by Gender
 # group by gender of drivers in crashes and damage Level
 damage_data = df_drivers.groupby(
     ['SEX', 'DAMAGE']).size().reset_index(name='Count')
@@ -269,9 +350,8 @@ stacked_bar_chart = alt.Chart(damage_data).mark_bar().encode(
 stacked_bar_chart
 ```
 
-###  Crash Counts by Lighting Condition
-
 ```{python}
+# Crash Counts by Lighting Condition
 # group by get crash counts for each lighting condition 
 light_counts = df_crash_2019['LIGHTING_CONDITION'].value_counts().reset_index()
 light_counts.columns = ['LIGHTING_CONDITION', 'Count']
@@ -291,9 +371,8 @@ bar_chart_light = alt.Chart(light_counts).mark_bar().encode(
 bar_chart_light
 ```
 
-###  Average Injuries by Lighting Condition
-
 ```{python}
+#  Average Injuries by Lighting Condition
 # get average injury rate based on lighting condition
 grouped_light = df_crash_2019.groupby('LIGHTING_CONDITION')[
     'INJURIES_TOTAL'].mean().reset_index()
@@ -313,9 +392,8 @@ scatter_light = alt.Chart(grouped_light).mark_circle(size=200).encode(
 scatter_light
 ```
 
-###  Average Fatal by Lighting Condition
-
 ```{python}
+# Average Fatal by Lighting Condition
 # get average fatal rate based on lighting condition
 grouped_light_fatal = df_crash_2019.groupby('LIGHTING_CONDITION')[
     'INJURIES_FATAL'].mean().reset_index()
@@ -336,11 +414,10 @@ scatter_light_fatal = alt.Chart(grouped_light_fatal).mark_circle(size=200).encod
 scatter_light_fatal
 ```
 
-###  Average Injuries by Safety Equipment (Seat Belt)
-
 ```{python}
+# Average Injuries by Safety Equipment (Seat Belt)
 # get average injury rate based on safety equipment wear condition
-grouped_seatbelt = df_merged_2019.groupby('SAFETY_EQUIPMENT')[
+grouped_seatbelt = df_merged_after_2019.groupby('SAFETY_EQUIPMENT')[
     'INJURIES_TOTAL'].mean().reset_index()
 grouped_seatbelt.rename(
     columns={'INJURIES_TOTAL': 'Avg_Injuries'}, inplace=True)
@@ -359,11 +436,10 @@ scatter_seatbelt = alt.Chart(grouped_seatbelt).mark_circle(size=200).encode(
 scatter_seatbelt
 ```
 
-###  Average Fatal by Safety Equipment
-
 ```{python}
+# Average Fatal by Safety Equipment
 # get average fatal rate based on safety equipment wear condition
-grouped_belt_fatal = df_merged_2019.groupby('SAFETY_EQUIPMENT')[
+grouped_belt_fatal = df_merged_after_2019.groupby('SAFETY_EQUIPMENT')[
     'INJURIES_FATAL'].mean().reset_index()
 grouped_belt_fatal.rename(
     columns={'INJURIES_FATAL': 'Avg_FATAL'}, inplace=True)
@@ -382,9 +458,8 @@ scatter_belt_fatal_plot = alt.Chart(grouped_belt_fatal).mark_circle(size=200).en
 scatter_belt_fatal_plot
 ```
 
-###  Crash Counts by Roadway Surface Condition
-
 ```{python}
+# Crash Counts by Roadway Surface Condition
 # get crash counts based on roadway surface condition
 road_counts = df_crash_2019['ROADWAY_SURFACE_COND'].value_counts(
 ).reset_index()
@@ -405,9 +480,8 @@ bar_chart_road = alt.Chart(road_counts).mark_bar().encode(
 bar_chart_road
 ```
 
-###  Average Injuries by Roadway Surface Condition
-
 ```{python}
+# Average Injuries by Roadway Surface Condition
 # get average injury rate based on roadway surface condition
 grouped_roadway = df_crash_2019.groupby('ROADWAY_SURFACE_COND')[
     'INJURIES_TOTAL'].mean().reset_index()
@@ -428,9 +502,8 @@ grouped_roadway = alt.Chart(grouped_roadway).mark_circle(size=200).encode(
 grouped_roadway
 ```
 
-###  Average Fatal by Roadway Surface Condition
-
 ```{python}
+# Average Fatal by Roadway Surface Condition
 # get average fatal rate based on roadway surface condition
 grouped_road_fatal = df_crash_2019.groupby('ROADWAY_SURFACE_COND')[
     'INJURIES_FATAL'].mean().reset_index()
@@ -450,9 +523,8 @@ scatter_road_fatal_plot = alt.Chart(grouped_road_fatal).mark_circle(size=200).en
 scatter_road_fatal_plot
 ```
 
-###  Distribution of Primary Type of Causations
-
 ```{python}
+# Distribution of Primary Type of Causations
 # get crash counts for each primary crash reason
 type_counts = df_crash_2019['PRIM_CONTRIBUTORY_CAUSE'].value_counts(
 ).reset_index()
@@ -475,9 +547,8 @@ bar_chart_type
 # Refencing chatgpt for sorting value in graphing.
 ```
 
-###  Average Injusires by Primary Type of Causation
-
 ```{python}
+# Average Injusires by Primary Type of Causation
 # get average injury rate for each primary crash reason
 grouped_type = df_crash_2019.groupby('PRIM_CONTRIBUTORY_CAUSE')[
     'INJURIES_TOTAL'].mean().reset_index()
@@ -500,10 +571,8 @@ grouped_type_plot = alt.Chart(grouped_type_sorted).mark_bar().encode(
 grouped_type_plot
 ```
 
-
-# 4. Data Preparation for Shiny App
-
 ```{python}
+# 4. Data Preparation for Shiny App
 # keep only necessary columns
 merged_for_shiny = merged_df[[
     'CRASH_DATE', 'PRIM_CONTRIBUTORY_CAUSE', 'LATITUDE', 'LONGITUDE']]
@@ -685,22 +754,56 @@ final_plot = scatter_plot + background
 final_plot.show()
 ```
 
+
+```{.python include="shiny-app/basic-app/app.py"}
+
+```{python}
+#| echo: false
+%run shiny-app/basic-app/app.py
+```
+
+```{python}
+#| echo: false
+# function to print shiny app code (from ps6)
+def print_file_contents(file_path):
+    """Print contents of a file."""
+    try:
+        with open(file_path, 'r') as f:
+            content = f.read()
+            print("```python")
+            print(content)
+            print("```")
+    except FileNotFoundError:
+        print("```python")
+        print(f"Error: File '{file_path}' not found")
+        print("```")
+    except Exception as e:
+        print("```python") 
+        print(f"Error reading file: {e}")
+        print("```")
+```
+
+```{python, echo: false}
+# app.py for shiny app
+print_file_contents("./shiny-app/basic-app/app.py") 
+```
+
+```{python}
 # 5. Text Analysis
 
-I aim to extract car crash news articles from the CBS News website and perform text analysis.
+# I aim to extract car crash news articles from the CBS News website and perform text analysis.
 
-Initially, I observe that each article is enclosed in `<h4>` tags. To extract the article titles, hyperlinks, and publication dates, I use the `soup.find_all('h4')` method.
+# Initially, I observe that each article is enclosed in `<h4>` tags. To extract the article titles, hyperlinks, and publication dates, I use the `soup.find_all('h4')` method.
 
-Next, I identify a challenge: the 'LATEST NEWS' section also contains articles and links, but they are unrelated to car crashes. To capture the correct article titles and corresponding URLs, I implement two approaches. I find that each page typically features 25 car crash news articles. Additionally, within the 'LATEST NEWS' section, I notice the presence of the `<h3 class="component__title">Latest News</h3>` tag and the `<div class="component__item-wrapper"></div>` tag. I leverage additional conditions of skipping the specific titles of the latest news. But I find out that the title of lastes news will change over time. So I need to modify my code with the titles changing over time.
+# Next, I identify a challenge: the 'LATEST NEWS' section also contains articles and links, but they are unrelated to car crashes. To capture the correct article titles and corresponding URLs, I implement two approaches. I find that each page typically features 25 car crash news articles. Additionally, within the 'LATEST NEWS' section, I notice the presence of the `<h3 class="component__title">Latest News</h3>` tag and the `<div class="component__item-wrapper"></div>` tag. I leverage additional conditions of skipping the specific titles of the latest news. But I find out that the title of lastes news will change over time. So I need to modify my code with the titles changing over time.
 
-Third, in addition to extracting metadata (such as titles, descriptions, and dates) from the main page, I also fetch the full news article content by navigating to the links. I encounter the error `MissingSchema: Invalid URL '/chicago/weather/': No scheme supplied. Perhaps you meant https:///chicago/weather/?`. To resolve this, I revise my code to check whether the extracted URL is relative and, if so, prepend the domain (https://www.cbsnews.com) to it.
+# Third, in addition to extracting metadata (such as titles, descriptions, and dates) from the main page, I also fetch the full news article content by navigating to the links. I encounter the error `MissingSchema: Invalid URL '/chicago/weather/': No scheme supplied. Perhaps you meant https:///chicago/weather/?`. To resolve this, I revise my code to check whether the extracted URL is relative and, if so, prepend the domain (https://www.cbsnews.com) to it.
 
-Fourth, some articles only contains videos but text, so I add a condition to check for the string "video" in the URL and skip those articles.
+# Fourth, some articles only contains videos but text, so I add a condition to check for the string "video" in the URL and skip those articles.
 
-Finally, I export the extracted text into a .txt file.
+# Finally, I export the extracted text into a .txt file.
+# Below is the code for scraping the first page.
 
-Below is the code for scraping the first page.
-```{python}
 import requests
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin
@@ -796,13 +899,14 @@ print(f"Articles on page 1 have been successfully saved to '{output_file}'")
 
 ```
 
-I then apply the web scraping code to the second and third pages, extracting a total of `150` articles in preparation for text analysis.
-
-
-I update the code to append data from page 2 and 3, by reusing the logic but adjusting the URL for the next page. Below is the code to extract articles and URLs from page 1 to page 3. The text data is stored in the `car_crash_Chicago.txt`.
-
-I ask ChatGPT how to iterate several pages to extract news articles, and make my code consice. It suggests using `urls = []` and `for main_page_url in urls:` as loops.
 ```{python}
+# I then apply the web scraping code to the second and third pages, extracting a total of `150` articles in preparation for text analysis.
+
+
+# I update the code to append data from page 2 and 3, by reusing the logic but adjusting the URL for the next page. Below is the code to extract articles and URLs from page 1 to page 3. The text data is stored in the `car_crash_Chicago.txt`.
+
+# I ask ChatGPT how to iterate several pages to extract news articles, and make my code consice. It suggests using `urls = []` and `for main_page_url in urls:` as loops.
+
 import requests
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin
@@ -906,10 +1010,9 @@ print(f"Articles from all pages under 'Car Crash' section have been successfully
 
 ```
 
-Now, we will move to the text analysis. I first want to analysis the polarity (negative/ positive) of the sentences.
-
-
 ```{python}
+# Now, we will move to the text analysis. I first want to analysis the polarity (negative/ positive) of the sentences.
+
 import spacy
 nlp = spacy.load("en_core_web_sm")
 from spacytextblob.spacytextblob import SpacyTextBlob 
@@ -943,10 +1046,9 @@ chart1 = alt.Chart(df_trump).mark_line().encode(
 chart1
 ```
 
-I find out that there is one sentence with the polarity of -1.0, which is very extreme in expressing the negativity. I am curious about what the sentence is, and what tragedy happens. So I select and print what the sentence is, as well as the surrounding 5 sentences.
-
-
 ```{python}
+# I find out that there is one sentence with the polarity of -1.0, which is very extreme in expressing the negativity. I am curious about what the sentence is, and what tragedy happens. So I select and print what the sentence is, as well as the surrounding 5 sentences.
+
 # Variable to store the least polarity and its corresponding sentence
 min_polarity = float('inf')
 least_polarity_sentence = ""
@@ -962,7 +1064,6 @@ print(f"The sentence with the least polarity is: \"{least_polarity_sentence.stri
 print(f"Polarity: {min_polarity:.2f}")
 
 ```
-
 
 ```{python}
 # Variable to store the least polarity and its index
@@ -993,10 +1094,11 @@ print(f"\nThe least polarity is: {min_polarity:.2f}")
 
 ```
 
-I also want to know which sentence is of the most polarity, and print the surrounding 5 sentences.
-
-I ask ChatGPT how to print surrounding sentence for polarity equal to -1.0. My prompt is in this [link](https://chatgpt.com/share/675272e4-1e60-8002-92b0-aaedad042e6e).
 ```{python}
+# I also want to know which sentence is of the most polarity, and print the surrounding 5 sentences.
+
+# I ask ChatGPT how to print surrounding sentence for polarity equal to -1.0. My prompt is in this [link](https://chatgpt.com/share/675272e4-1e60-8002-92b0-aaedad042e6e).
+
 # Variable to store the highest polarity and its index
 max_polarity = float('-inf')
 max_polarity_index = -1
@@ -1025,9 +1127,9 @@ print(f"\nThe highest polarity is: {max_polarity:.2f}")
 
 ```
 
-I now want to perform a word frequency analysis, identify the most frequent word and its count. I ask ChatGPT how to achieve this, it suggests using `most_common` command. 
-
 ```{python}
+# I now want to perform a word frequency analysis, identify the most frequent word and its count. I ask ChatGPT how to achieve this, it suggests using `most_common` command. 
+
 from collections import Counter
 import pandas as pd
 import altair as alt
@@ -1062,13 +1164,11 @@ chart = alt.Chart(df_top_words).mark_bar().encode(
 )
 
 chart
-
 ```
 
-
-
-I also make a text analysis on the car accident in Washington DC. I extract news articles for DC car accident from https://www.fox5dc.com/tag/traffic. It follows the same logic when scraping the news articles for Chicago car crashes.
 ```{python}
+# I also make a text analysis on the car accident in Washington DC. I extract news articles for DC car accident from https://www.fox5dc.com/tag/traffic. It follows the same logic when scraping the news articles for Chicago car crashes.
+
 import requests
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin
