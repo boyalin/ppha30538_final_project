@@ -1,0 +1,8 @@
+# ignore virtual environment
+.venv/
+
+# ignore system files
+.DS_Store
+
+# ignore the data files 
+data/
