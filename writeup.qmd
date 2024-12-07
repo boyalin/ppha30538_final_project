@@ -37,7 +37,7 @@ jupyter: python3
 ## 1. Introduction
 **Research Question**: What are the most significant factors contributing to traffic crashes in Chicago?
 
-**Data**: We use crashes and people data from Chicago Data Portal in the year 2013-2024, and use crashes data from Open Data DC in the year 1899-2024. Moreover, we extract text data by web-scraping from Chicago and DC news websites respectively. Please drive link for all datasets (including both initial, unmodified dataframes we download and the final versions of the dataframe(s)) in this [link](https://drive.google.com/drive/folders/1tsSsifhK4LLAWtzXqsEb91gDD3ShDvNx?usp=sharing).
+**Data**: We use crashes and people data from Chicago Data Portal in the year 2013-2024, and use crashes data from Open Data DC in the year 1899-2024. Moreover, we extract text data by web-scraping from Chicago and DC news websites respectively. Please download all of our datasets (including both initial, unmodified dataframes we download and the final versions of the dataframes) in this [link](https://drive.google.com/drive/folders/1tsSsifhK4LLAWtzXqsEb91gDD3ShDvNx?usp=sharing).
 
 **Motivation**: Traffic crashes are a persistent issue in urban environments, posing risks to public safety and city infrastructure. By comparing monthly crash counts per-capita in Chicago with those in Washington, D.C, we find more undesirable traffic crash performance in Chicago. This analysis investigates the factors contributing to traffic crashes in Chicago. Using a combination of time series data, demographic indicators, Shiny App, and text analysis, the study aims to identify patterns and propose actionable recommendations to reduce traffic accidents.
 
