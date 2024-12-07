@@ -94,6 +94,9 @@ Note: Our detailed codes are provided below.
 ```{python}
 # 1. Cleaning Data
 # import required packages
+from datetime import date
+import json
+import time
 import os
 import pandas as pd
 import altair as alt
@@ -172,14 +175,14 @@ df_merged_after_2019 = merged_df[merged_df['CRASH_DATE'] >= '2019-01-01']
 
 ```{python}
 # save csv to path
-merge_path= r'/Users/boyalin/Documents/GitHub/ppha30538_ps/ppha30538_final_project/data/df_merged_after_2019.csv'
+merge_path = r'/Users/boyalin/Documents/GitHub/ppha30538_ps/ppha30538_final_project/data/df_merged_after_2019.csv'
 df_merged_after_2019.to_csv(merge_path, index=False)
 ```
 
 
 ```{python}
 # 2. Exploring Data
-## a. find the crash pattern in month unit, week unit and hour unit:
+# a. find the crash pattern in month unit, week unit and hour unit:
 # value counts to find frequency on month, week and daily basis
 month_counts = df_crash_2019['CRASH_MONTH'].value_counts(
 ).sort_values(ascending=False)
@@ -197,7 +200,7 @@ print(hour_counts.head(5))
 ```
 
 ```{python}
-## b. find out the sexual indentidy influence
+# b. find out the sexual indentidy influence
 # filter dataframe for drivers in crashes
 df_drivers = df_merged_after_2019.loc[df_merged_after_2019['PERSON_TYPE'] == 'DRIVER']
 # get crash counts for each sex catgory as driver
@@ -209,7 +212,7 @@ print(identity_counts)
 ```
 
 ```{python}
-## c. find out age impact
+# c. find out age impact
 # filter age, delete unrealistic value
 df_drivers_age = df_drivers[(df_drivers['AGE'] > 0)
                             & df_drivers['AGE'].notna()]
@@ -231,7 +234,7 @@ print(age_counts)
 ```
 
 ```{python}
-# select only age range between 6-12 years old, solve potentially wrong age value 
+# select only age range between 6-12 years old, solve potentially wrong age value
 df_age_12 = df_drivers_age[(df_drivers_age['AGE'] > 6)
                            & (df_drivers_age['AGE'] < 12)]
 print(len(df_age_12))
@@ -267,7 +270,7 @@ df_chicago_dc = pd.concat([df_crash_2019, df_dc_2019])
 
 ```{python}
 # save csv to path
-concat_path= r'/Users/boyalin/Documents/GitHub/ppha30538_ps/ppha30538_final_project/data/df_chicago_dc.csv'
+concat_path = r'/Users/boyalin/Documents/GitHub/ppha30538_ps/ppha30538_final_project/data/df_chicago_dc.csv'
 df_chicago_dc.to_csv(concat_path, index=False)
 ```
 
@@ -287,7 +290,8 @@ population_chicago = 2638159
 population_dc = 681683
 population_dict = {'Chicago': population_chicago, 'DC': population_dc}
 monthly_counts['Population'] = monthly_counts['city'].map(population_dict)
-monthly_counts['Per_Capita_Crash'] = monthly_counts['Crash_Count'] / monthly_counts['Population']
+monthly_counts['Per_Capita_Crash'] = monthly_counts['Crash_Count'] / \
+    monthly_counts['Population']
 print(monthly_counts)
 
 # Google reference for chicago population and DC population
@@ -352,7 +356,7 @@ stacked_bar_chart
 
 ```{python}
 # Crash Counts by Lighting Condition
-# group by get crash counts for each lighting condition 
+# group by get crash counts for each lighting condition
 light_counts = df_crash_2019['LIGHTING_CONDITION'].value_counts().reset_index()
 light_counts.columns = ['LIGHTING_CONDITION', 'Count']
 light_counts = light_counts.sort_values(by='Count', ascending=False)
@@ -530,7 +534,7 @@ type_counts = df_crash_2019['PRIM_CONTRIBUTORY_CAUSE'].value_counts(
 ).reset_index()
 type_counts.columns = ['PRIM_CONTRIBUTORY_CAUSE', 'Count']
 type_counts = type_counts.sort_values(by='Count', ascending=False)
-#draw crash counts for each primary crash reason
+# draw crash counts for each primary crash reason
 bar_chart_type = alt.Chart(type_counts).mark_bar().encode(
     x=alt.X('PRIM_CONTRIBUTORY_CAUSE:N', title='Type',
             sort=type_counts['PRIM_CONTRIBUTORY_CAUSE'].tolist()),
@@ -686,7 +690,7 @@ print(merged_final_data_cleaned.head())
 ```
 
 ```{python}
-# group by catergory, year, binned longitude, and binned latitude. count obs and sort the values 
+# group by catergory, year, binned longitude, and binned latitude. count obs and sort the values
 aggregated_data = (
     merged_final_data_cleaned.groupby(
         ['category', 'latitude_binned', 'longitude_binned', 'year'])
@@ -763,7 +767,7 @@ final_plot.show()
 ```
 
 ```{python}
-#| echo: false
+# | echo: false
 # function to print shiny app code (from ps6)
 def print_file_contents(file_path):
     """Print contents of a file."""
@@ -778,7 +782,7 @@ def print_file_contents(file_path):
         print(f"Error: File '{file_path}' not found")
         print("```")
     except Exception as e:
-        print("```python") 
+        print("```python")
         print(f"Error reading file: {e}")
         print("```")
 ```
@@ -820,62 +824,65 @@ with open(output_file, "w", encoding="utf-8") as file:
     response = requests.get(main_page_url)
     if response.status_code == 200:
         soup = BeautifulSoup(response.text, 'html.parser')
-        
+
         # Counter to track the number of articles processed
         article_count = 0
-        
+
         # Find all <article> elements
         for article in soup.find_all('article', class_='item'):
             # Stop after processing the first 25 articles
             if article_count >= 25:
                 break
-            
+
             # Extract the link from the <a> tag
             a_tag = article.find('a', class_='item__anchor')
             link = a_tag['href'] if a_tag and 'href' in a_tag.attrs else None
-            
+
             # Skip if the link contains 'video' (this filters out video links)
             if link and "video" in link:
                 continue  # Skip this article if it's a video link
-            
+
             # Ensure the link is an absolute URL
             if link:
-                link = urljoin(main_page_url, link)  # Handles both relative and absolute URLs
-            
+                # Handles both relative and absolute URLs
+                link = urljoin(main_page_url, link)
+
             # Extract the title from the <h4> tag
             title_tag = article.find('h4', class_='item__hed')
             title = title_tag.text.strip() if title_tag else None
-            
+
             # Check if the title contains the specified phrase and break if it does
             if title and "Infant dies after being found unresponsive" in title:
                 break
-            
+
             # Extract the description from the <p class="item__dek"> tag
             description_tag = article.find('p', class_='item__dek')
             description = description_tag.text.strip() if description_tag else None
-            
+
             # Extract the date from the <li class="item__date"> tag
             date_tag = article.find('li', class_='item__date')
             date = date_tag.text.strip() if date_tag else None
-            
+
             # Skip articles without required metadata
             if not (title and link and date):
                 continue  # Skip this article
-            
+
             # Write metadata to the file
             file.write(f"Title: {title}\n")
             file.write(f"Description: {description}\n")
             file.write(f"Link: {link}\n")
             file.write(f"Date: {date}\n")
-            
+
             # Fetch the full article content
             try:
                 article_response = requests.get(link)
                 if article_response.status_code == 200:
-                    article_soup = BeautifulSoup(article_response.text, 'html.parser')
-                    
+                    article_soup = BeautifulSoup(
+                        article_response.text, 'html.parser')
+
                     # Extract the main content (usually inside <section class="content__body">)
-                    section = article_soup.find('section', class_='content__body')
+                    section = article_soup.find(
+                        'section', class_='content__body')
                     if section:
                         file.write("\nFull Article:\n")
                         for paragraph in section.find_all('p'):
@@ -889,11 +896,12 @@ with open(output_file, "w", encoding="utf-8") as file:
             except requests.exceptions.RequestException as e:
                 print(f"Error fetching article {link}: {e}")
                 continue  # Skip if there's an error fetching the article
-            
+
             # Increment the counter
             article_count += 1
     else:
-        print(f"Failed to fetch the main page. Status code: {response.status_code}")
+        print(
+            f"Failed to fetch the main page. Status code: {response.status_code}")
 
 print(f"Articles on page 1 have been successfully saved to '{output_file}'")
 
@@ -929,64 +937,68 @@ with open(output_file, "w", encoding="utf-8") as file:
         response = requests.get(main_page_url)
         if response.status_code == 200:
             soup = BeautifulSoup(response.text, 'html.parser')
-            
+
             # Locate the section containing articles under "Car Crash"
-            car_crash_section = soup.find('section', attrs={'data-slug': 'car-crash'})
+            car_crash_section = soup.find(
+                'section', attrs={'data-slug': 'car-crash'})
             if not car_crash_section:
                 print(f"Car Crash section not found on {main_page_url}")
                 continue
-            
+
             # Counter to track the number of articles processed
             article_count = 0
-            
+
             # Find all <article> elements within the relevant container
             for article in car_crash_section.find_all('article', class_='item'):
                 # Stop after processing the first 25 articles per page
                 if article_count >= 25:
                     break
-                
+
                 # Extract the link from the <a> tag
                 a_tag = article.find('a', class_='item__anchor')
                 link = a_tag['href'] if a_tag and 'href' in a_tag.attrs else None
-                
+
                 # Skip if the link contains 'video' (this filters out video links)
                 if link and "video" in link:
                     continue  # Skip this article if it's a video link
-                
+
                 # Ensure the link is an absolute URL
                 if link:
-                    link = urljoin(main_page_url, link)  # Handles both relative and absolute URLs
-                
+                    # Handles both relative and absolute URLs
+                    link = urljoin(main_page_url, link)
+
                 # Extract the title from the <h4> tag
                 title_tag = article.find('h4', class_='item__hed')
                 title = title_tag.text.strip() if title_tag else None
-                
+
                 # Extract the description from the <p class="item__dek"> tag
                 description_tag = article.find('p', class_='item__dek')
                 description = description_tag.text.strip() if description_tag else None
-                
+
                 # Extract the date from the <li class="item__date"> tag
                 date_tag = article.find('li', class_='item__date')
                 date = date_tag.text.strip() if date_tag else None
-                
+
                 # Skip articles without required metadata
                 if not (title and link and date):
                     continue  # Skip this article
-                
+
                 # Write metadata to the file
                 file.write(f"Title: {title}\n")
                 file.write(f"Description: {description}\n")
                 file.write(f"Link: {link}\n")
                 file.write(f"Date: {date}\n")
-                
+
                 # Fetch the full article content
                 try:
                     article_response = requests.get(link)
                     if article_response.status_code == 200:
-                        article_soup = BeautifulSoup(article_response.text, 'html.parser')
-                        
+                        article_soup = BeautifulSoup(
+                            article_response.text, 'html.parser')
+
                         # Extract the main content (usually inside <section class="content__body">)
-                        section = article_soup.find('section', class_='content__body')
+                        section = article_soup.find(
+                            'section', class_='content__body')
                         if section:
                             file.write("\nFull Article:\n")
                             for paragraph in section.find_all('p'):
@@ -1000,22 +1012,26 @@ with open(output_file, "w", encoding="utf-8") as file:
                 except requests.exceptions.RequestException as e:
                     print(f"Error fetching article {link}: {e}")
                     continue  # Skip if there's an error fetching the article
-                
+
                 # Increment the counter
                 article_count += 1
         else:
-            print(f"Failed to fetch the main page. Status code: {response.status_code}")
+            print(
+                f"Failed to fetch the main page. Status code: {response.status_code}")
 
-print(f"Articles from all pages under 'Car Crash' section have been successfully saved to '{output_file}'")
+print(
+    f"Articles from all pages under 'Car Crash' section have been successfully saved to '{output_file}'")
 
 ```
 
 ```{python}
 # Now, we will move to the text analysis. I first want to analysis the polarity (negative/ positive) of the sentences.
 
+from spacytextblob.spacytextblob import SpacyTextBlob
+import altair as alt
+import pandas as pd
 import spacy
 nlp = spacy.load("en_core_web_sm")
-from spacytextblob.spacytextblob import SpacyTextBlob 
 nlp.add_pipe('spacytextblob')
 
 with open("car_crash_Chicago.txt", "r") as file:
@@ -1025,8 +1041,6 @@ doc_crash = nlp(car_crash_Chicago_text)
 print(f"Polarity: {doc_crash._.blob.polarity:.2f}")
 print(f"Subjectivity: {doc_crash._.blob.subjectivity:.2f}")
 
-import pandas as pd
-import altair as alt
 
 crash_sentence_polarities = []
 for i, sentence in enumerate(doc_crash.sents):
@@ -1035,12 +1049,12 @@ for i, sentence in enumerate(doc_crash.sents):
 df_trump = pd.DataFrame(crash_sentence_polarities)
 
 chart1 = alt.Chart(df_trump).mark_line().encode(
-    x = alt.X('n', title = 'Sentence Number'),
-    y = alt.Y('crash_polarity', title = "Polarity")
+    x=alt.X('n', title='Sentence Number'),
+    y=alt.Y('crash_polarity', title="Polarity")
 ).properties(
-    title = "Car Crash in Chicago",
-    width = 400,
-    height = 100
+    title="Car Crash in Chicago",
+    width=400,
+    height=100
 )
 
 chart1
@@ -1060,7 +1074,8 @@ for sentence in doc_crash.sents:
         min_polarity = polarity
         least_polarity_sentence = sentence.text
 
-print(f"The sentence with the least polarity is: \"{least_polarity_sentence.strip()}\"")
+print(
+    f"The sentence with the least polarity is: \"{least_polarity_sentence.strip()}\"")
 print(f"Polarity: {min_polarity:.2f}")
 
 ```
@@ -1128,7 +1143,7 @@ print(f"\nThe highest polarity is: {max_polarity:.2f}")
 ```
 
 ```{python}
-# I now want to perform a word frequency analysis, identify the most frequent word and its count. I ask ChatGPT how to achieve this, it suggests using `most_common` command. 
+# I now want to perform a word frequency analysis, identify the most frequent word and its count. I ask ChatGPT how to achieve this, it suggests using `most_common` command.
 
 from collections import Counter
 import pandas as pd
@@ -1139,14 +1154,16 @@ with open("car_crash_Chicago.txt", "r") as file:
     car_crash_Chicago_text = file.read()
 
 # Tokenize the text and filter out stop words and punctuation
-tokens = [token.text.lower() for token in nlp(car_crash_Chicago_text) if token.is_alpha and not token.is_stop]
+tokens = [token.text.lower() for token in nlp(car_crash_Chicago_text)
+          if token.is_alpha and not token.is_stop]
 
 # Count word frequencies
 word_frequencies = Counter(tokens)
 
 # Identify the most common word and its count
 most_common_word, most_common_count = word_frequencies.most_common(1)[0]
-print(f"The most frequent word is '{most_common_word}' and it appears {most_common_count} times.")
+print(
+    f"The most frequent word is '{most_common_word}' and it appears {most_common_count} times.")
 
 # Prepare data for visualization (top 10 words by frequency)
 top_words = word_frequencies.most_common(30)
@@ -1194,22 +1211,23 @@ with open(output_file, "w", encoding="utf-8") as file:
         if total_articles_extracted >= 100:
             print("Extracted 100 articles, stopping...")
             break
-        
+
         print(f"Processing {main_page_url}")
-        
+
         # Fetch and parse the main page
         response = requests.get(main_page_url)
         if response.status_code == 200:
             soup = BeautifulSoup(response.text, 'html.parser')
-            
+
             # Locate articles on the main page
-            articles = soup.find_all('article', class_='article')  # Finding all articles with 'article' class
+            # Finding all articles with 'article' class
+            articles = soup.find_all('article', class_='article')
             if not articles:
                 print(f"No articles found on {main_page_url}")
                 continue
 
             print(f"Found {len(articles)} articles on {main_page_url}")
-            
+
             # Process each article on the page
             for article in articles:
                 # Stop after extracting 100 articles
@@ -1223,15 +1241,17 @@ with open(output_file, "w", encoding="utf-8") as file:
                     continue
                 title = a_tag.text.strip()
                 link = urljoin(main_page_url, a_tag['href'])
-                
+
                 # Extract the description
                 description_tag = article.find('p', class_='dek')
-                description = description_tag.text.strip() if description_tag else "Description not found"
-                
+                description = description_tag.text.strip(
+                ) if description_tag else "Description not found"
+
                 # Extract the publication time
                 time_tag = article.find('time', class_='time')
                 if time_tag:
-                    publication_time_text = time_tag.get_text(strip=True)  # Extracts visible text
+                    publication_time_text = time_tag.get_text(
+                        strip=True)  # Extracts visible text
                 else:
                     publication_time_text = "Time not found"
 
@@ -1239,12 +1259,15 @@ with open(output_file, "w", encoding="utf-8") as file:
                 try:
                     article_response = requests.get(link)
                     if article_response.status_code == 200:
-                        article_soup = BeautifulSoup(article_response.text, 'html.parser')
-                        
+                        article_soup = BeautifulSoup(
+                            article_response.text, 'html.parser')
+
                         # Extract the main content from <div class="article-body">
-                        content_section = article_soup.find('div', class_='article-body')
+                        content_section = article_soup.find(
+                            'div', class_='article-body')
                         if content_section:
-                            content = "\n".join([p.text.strip() for p in content_section.find_all('p')])
+                            content = "\n".join(
+                                [p.text.strip() for p in content_section.find_all('p')])
                         else:
                             content = "Content not found."
                     else:
@@ -1261,11 +1284,12 @@ with open(output_file, "w", encoding="utf-8") as file:
                 file.write(f"Title: {title}\n")
                 file.write(f"Link: {link}\n")
                 file.write(f"Description: {description}\n")
-                file.write(f"Publication Time (Text): {publication_time_text}\n")
+                file.write(
+                    f"Publication Time (Text): {publication_time_text}\n")
                 file.write("\nFull Article:\n")
                 file.write(content)
                 file.write("\n" + "-" * 80 + "\n\n")
-                
+
                 # Increment the counter
                 total_articles_extracted += 1
 
@@ -1275,13 +1299,15 @@ with open(output_file, "w", encoding="utf-8") as file:
                     break
 
         else:
-            print(f"Failed to fetch the main page {main_page_url}. Status code: {response.status_code}")
+            print(
+                f"Failed to fetch the main page {main_page_url}. Status code: {response.status_code}")
 
         # Check if we have reached the desired number of articles
         if total_articles_extracted >= 100:
             break
 
-    print(f"Extracted {total_articles_extracted} articles. Saved to '{output_file}'.")
+    print(
+        f"Extracted {total_articles_extracted} articles. Saved to '{output_file}'.")
 
 ```
 
@@ -1300,9 +1326,9 @@ accident_sentence_polarities = []
 for i, sentence in enumerate(doc_accident.sents):
     polarity = sentence._.blob.polarity
     accident_sentence_polarities.append({"n": i + 1, "crash_polarity": polarity})
-df_trump = pd.DataFrame(accident_sentence_polarities)
+df_sentence_polarities = pd.DataFrame(accident_sentence_polarities)
 
-chart1 = alt.Chart(df_trump).mark_line().encode(
+chart1 = alt.Chart(df_sentence_polarities).mark_line().encode(
     x = alt.X('n', title = 'Sentence Number'),
     y = alt.Y('crash_polarity', title = "Polarity")
 ).properties(
