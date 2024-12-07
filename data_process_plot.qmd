@@ -684,3 +684,532 @@ scatter_plot = alt.Chart(filtered_data).mark_circle().encode(
 final_plot = scatter_plot + background
 final_plot.show()
 ```
+
+# 5. Text Analysis
+
+I aim to extract car crash news articles from the CBS News website and perform text analysis.
+
+Initially, I observe that each article is enclosed in `<h4>` tags. To extract the article titles, hyperlinks, and publication dates, I use the `soup.find_all('h4')` method.
+
+Next, I identify a challenge: the 'LATEST NEWS' section also contains articles and links, but they are unrelated to car crashes. To capture the correct article titles and corresponding URLs, I implement two approaches. I find that each page typically features 25 car crash news articles. Additionally, within the 'LATEST NEWS' section, I notice the presence of the `<h3 class="component__title">Latest News</h3>` tag and the `<div class="component__item-wrapper"></div>` tag. I leverage additional conditions of skipping the specific titles of the latest news. But I find out that the title of lastes news will change over time. So I need to modify my code with the titles changing over time.
+
+Third, in addition to extracting metadata (such as titles, descriptions, and dates) from the main page, I also fetch the full news article content by navigating to the links. I encounter the error `MissingSchema: Invalid URL '/chicago/weather/': No scheme supplied. Perhaps you meant https:///chicago/weather/?`. To resolve this, I revise my code to check whether the extracted URL is relative and, if so, prepend the domain (https://www.cbsnews.com) to it.
+
+Fourth, some articles only contains videos but text, so I add a condition to check for the string "video" in the URL and skip those articles.
+
+Finally, I export the extracted text into a .txt file.
+
+Below is the code for scraping the first page.
+```{python}
+import requests
+from bs4 import BeautifulSoup
+from urllib.parse import urljoin
+
+# File to save the extracted articles
+output_file = "articles.txt"
+
+# URL of the main page containing articles
+main_page_url = "https://www.cbsnews.com/chicago/tag/car-crash/1/"
+
+# Open the file in write mode
+with open(output_file, "w", encoding="utf-8") as file:
+    # Fetch and parse the main page
+    response = requests.get(main_page_url)
+    if response.status_code == 200:
+        soup = BeautifulSoup(response.text, 'html.parser')
+        
+        # Counter to track the number of articles processed
+        article_count = 0
+        
+        # Find all <article> elements
+        for article in soup.find_all('article', class_='item'):
+            # Stop after processing the first 25 articles
+            if article_count >= 25:
+                break
+            
+            # Extract the link from the <a> tag
+            a_tag = article.find('a', class_='item__anchor')
+            link = a_tag['href'] if a_tag and 'href' in a_tag.attrs else None
+            
+            # Skip if the link contains 'video' (this filters out video links)
+            if link and "video" in link:
+                continue  # Skip this article if it's a video link
+            
+            # Ensure the link is an absolute URL
+            if link:
+                link = urljoin(main_page_url, link)  # Handles both relative and absolute URLs
+            
+            # Extract the title from the <h4> tag
+            title_tag = article.find('h4', class_='item__hed')
+            title = title_tag.text.strip() if title_tag else None
+            
+            # Check if the title contains the specified phrase and break if it does
+            if title and "Infant dies after being found unresponsive" in title:
+                break
+            
+            # Extract the description from the <p class="item__dek"> tag
+            description_tag = article.find('p', class_='item__dek')
+            description = description_tag.text.strip() if description_tag else None
+            
+            # Extract the date from the <li class="item__date"> tag
+            date_tag = article.find('li', class_='item__date')
+            date = date_tag.text.strip() if date_tag else None
+            
+            # Skip articles without required metadata
+            if not (title and link and date):
+                continue  # Skip this article
+            
+            # Write metadata to the file
+            file.write(f"Title: {title}\n")
+            file.write(f"Description: {description}\n")
+            file.write(f"Link: {link}\n")
+            file.write(f"Date: {date}\n")
+            
+            # Fetch the full article content
+            try:
+                article_response = requests.get(link)
+                if article_response.status_code == 200:
+                    article_soup = BeautifulSoup(article_response.text, 'html.parser')
+                    
+                    # Extract the main content (usually inside <section class="content__body">)
+                    section = article_soup.find('section', class_='content__body')
+                    if section:
+                        file.write("\nFull Article:\n")
+                        for paragraph in section.find_all('p'):
+                            file.write(paragraph.text.strip() + "\n")
+                        file.write("-" * 80 + "\n\n")
+                    else:
+                        continue  # Skip if no content found
+                else:
+                    print(f"Failed to fetch article: {link}")
+                    continue  # Skip if article request fails
+            except requests.exceptions.RequestException as e:
+                print(f"Error fetching article {link}: {e}")
+                continue  # Skip if there's an error fetching the article
+            
+            # Increment the counter
+            article_count += 1
+    else:
+        print(f"Failed to fetch the main page. Status code: {response.status_code}")
+
+print(f"Articles on page 1 have been successfully saved to '{output_file}'")
+
+```
+
+I then apply the web scraping code to the second and third pages, extracting a total of `150` articles in preparation for text analysis.
+
+
+I update the code to append data from page 2 and 3, by reusing the logic but adjusting the URL for the next page. Below is the code to extract articles and URLs from page 1 to page 3. The text data is stored in the `car_crash_Chicago.txt`.
+
+I ask ChatGPT how to iterate several pages to extract news articles, and make my code consice. It suggests using `urls = []` and `for main_page_url in urls:` as loops.
+```{python}
+import requests
+from bs4 import BeautifulSoup
+from urllib.parse import urljoin
+
+# File to save the extracted articles
+output_file = "car_crash_Chicago.txt"
+
+# List of URLs to scrape
+urls = [
+    "https://www.cbsnews.com/chicago/tag/car-crash/1/",
+    "https://www.cbsnews.com/chicago/tag/car-crash/2/",
+    "https://www.cbsnews.com/chicago/tag/car-crash/3/",
+    "https://www.cbsnews.com/chicago/tag/car-crash/4/"
+]
+
+# Open the file in append mode to save articles from multiple pages
+with open(output_file, "w", encoding="utf-8") as file:
+    for main_page_url in urls:
+        # Fetch and parse the main page
+        response = requests.get(main_page_url)
+        if response.status_code == 200:
+            soup = BeautifulSoup(response.text, 'html.parser')
+            
+            # Locate the section containing articles under "Car Crash"
+            car_crash_section = soup.find('section', attrs={'data-slug': 'car-crash'})
+            if not car_crash_section:
+                print(f"Car Crash section not found on {main_page_url}")
+                continue
+            
+            # Counter to track the number of articles processed
+            article_count = 0
+            
+            # Find all <article> elements within the relevant container
+            for article in car_crash_section.find_all('article', class_='item'):
+                # Stop after processing the first 25 articles per page
+                if article_count >= 25:
+                    break
+                
+                # Extract the link from the <a> tag
+                a_tag = article.find('a', class_='item__anchor')
+                link = a_tag['href'] if a_tag and 'href' in a_tag.attrs else None
+                
+                # Skip if the link contains 'video' (this filters out video links)
+                if link and "video" in link:
+                    continue  # Skip this article if it's a video link
+                
+                # Ensure the link is an absolute URL
+                if link:
+                    link = urljoin(main_page_url, link)  # Handles both relative and absolute URLs
+                
+                # Extract the title from the <h4> tag
+                title_tag = article.find('h4', class_='item__hed')
+                title = title_tag.text.strip() if title_tag else None
+                
+                # Extract the description from the <p class="item__dek"> tag
+                description_tag = article.find('p', class_='item__dek')
+                description = description_tag.text.strip() if description_tag else None
+                
+                # Extract the date from the <li class="item__date"> tag
+                date_tag = article.find('li', class_='item__date')
+                date = date_tag.text.strip() if date_tag else None
+                
+                # Skip articles without required metadata
+                if not (title and link and date):
+                    continue  # Skip this article
+                
+                # Write metadata to the file
+                file.write(f"Title: {title}\n")
+                file.write(f"Description: {description}\n")
+                file.write(f"Link: {link}\n")
+                file.write(f"Date: {date}\n")
+                
+                # Fetch the full article content
+                try:
+                    article_response = requests.get(link)
+                    if article_response.status_code == 200:
+                        article_soup = BeautifulSoup(article_response.text, 'html.parser')
+                        
+                        # Extract the main content (usually inside <section class="content__body">)
+                        section = article_soup.find('section', class_='content__body')
+                        if section:
+                            file.write("\nFull Article:\n")
+                            for paragraph in section.find_all('p'):
+                                file.write(paragraph.text.strip() + "\n")
+                            file.write("-" * 80 + "\n\n")
+                        else:
+                            continue  # Skip if no content found
+                    else:
+                        print(f"Failed to fetch article: {link}")
+                        continue  # Skip if article request fails
+                except requests.exceptions.RequestException as e:
+                    print(f"Error fetching article {link}: {e}")
+                    continue  # Skip if there's an error fetching the article
+                
+                # Increment the counter
+                article_count += 1
+        else:
+            print(f"Failed to fetch the main page. Status code: {response.status_code}")
+
+print(f"Articles from all pages under 'Car Crash' section have been successfully saved to '{output_file}'")
+
+```
+
+Now, we will move to the text analysis. I first want to analysis the polarity (negative/ positive) of the sentences.
+
+
+```{python}
+import spacy
+nlp = spacy.load("en_core_web_sm")
+from spacytextblob.spacytextblob import SpacyTextBlob 
+nlp.add_pipe('spacytextblob')
+
+with open("car_crash_Chicago.txt", "r") as file:
+    car_crash_Chicago_text = file.read()
+
+doc_crash = nlp(car_crash_Chicago_text)
+print(f"Polarity: {doc_crash._.blob.polarity:.2f}")
+print(f"Subjectivity: {doc_crash._.blob.subjectivity:.2f}")
+
+import pandas as pd
+import altair as alt
+
+crash_sentence_polarities = []
+for i, sentence in enumerate(doc_crash.sents):
+    polarity = sentence._.blob.polarity
+    crash_sentence_polarities.append({"n": i + 1, "crash_polarity": polarity})
+df_trump = pd.DataFrame(crash_sentence_polarities)
+
+chart1 = alt.Chart(df_trump).mark_line().encode(
+    x = alt.X('n', title = 'Sentence Number'),
+    y = alt.Y('crash_polarity', title = "Polarity")
+).properties(
+    title = "Car Crash in Chicago",
+    width = 400,
+    height = 100
+)
+
+chart1
+```
+
+I find out that there is one sentence with the polarity of -1.0, which is very extreme in expressing the negativity. I am curious about what the sentence is, and what tragedy happens. So I select and print what the sentence is, as well as the surrounding 5 sentences.
+
+
+```{python}
+# Variable to store the least polarity and its corresponding sentence
+min_polarity = float('inf')
+least_polarity_sentence = ""
+
+# Iterate over sentences to find the least polarity
+for sentence in doc_crash.sents:
+    polarity = sentence._.blob.polarity
+    if polarity < min_polarity:
+        min_polarity = polarity
+        least_polarity_sentence = sentence.text
+
+print(f"The sentence with the least polarity is: \"{least_polarity_sentence.strip()}\"")
+print(f"Polarity: {min_polarity:.2f}")
+
+```
+
+
+```{python}
+# Variable to store the least polarity and its index
+min_polarity = float('inf')
+min_polarity_index = -1
+
+# Store sentences in a list for easier indexing
+sentences = list(doc_crash.sents)
+
+# Iterate over sentences to find the least polarity
+for i, sentence in enumerate(sentences):
+    polarity = sentence._.blob.polarity
+    if polarity < min_polarity:
+        min_polarity = polarity
+        min_polarity_index = i
+
+# Determine the range of sentences to print
+start_index = max(0, min_polarity_index - 2)
+end_index = min(len(sentences), min_polarity_index + 3)
+
+# Print the sentences and highlight the one with the least polarity
+print("Surrounding sentences including the one with the least polarity:")
+for i in range(start_index, end_index):
+    marker = ">>" if i == min_polarity_index else "  "
+    print(f"{marker} Sentence {i + 1}: {sentences[i].text.strip()}")
+
+print(f"\nThe least polarity is: {min_polarity:.2f}")
+
+```
+
+I also want to know which sentence is of the most polarity, and print the surrounding 5 sentences.
+
+I ask ChatGPT how to print surrounding sentence for polarity equal to -1.0. My prompt is in this [link](https://chatgpt.com/share/675272e4-1e60-8002-92b0-aaedad042e6e).
+```{python}
+# Variable to store the highest polarity and its index
+max_polarity = float('-inf')
+max_polarity_index = -1
+
+# Store sentences in a list for easier indexing
+sentences = list(doc_crash.sents)
+
+# Iterate over sentences to find the one with the highest polarity
+for i, sentence in enumerate(sentences):
+    polarity = sentence._.blob.polarity
+    if polarity > max_polarity:
+        max_polarity = polarity
+        max_polarity_index = i
+
+# Determine the range of sentences to print
+start_index = max(0, max_polarity_index - 2)
+end_index = min(len(sentences), max_polarity_index + 3)
+
+# Print the sentences and highlight the one with the highest polarity
+print("Surrounding sentences including the one with the highest polarity:")
+for i in range(start_index, end_index):
+    marker = ">>" if i == max_polarity_index else "  "
+    print(f"{marker} Sentence {i + 1}: {sentences[i].text.strip()}")
+
+print(f"\nThe highest polarity is: {max_polarity:.2f}")
+
+```
+
+I now want to perform a word frequency analysis, identify the most frequent word and its count. I ask ChatGPT how to achieve this, it suggests using `most_common` command. 
+
+```{python}
+from collections import Counter
+import pandas as pd
+import altair as alt
+
+# Load the text from the file
+with open("car_crash_Chicago.txt", "r") as file:
+    car_crash_Chicago_text = file.read()
+
+# Tokenize the text and filter out stop words and punctuation
+tokens = [token.text.lower() for token in nlp(car_crash_Chicago_text) if token.is_alpha and not token.is_stop]
+
+# Count word frequencies
+word_frequencies = Counter(tokens)
+
+# Identify the most common word and its count
+most_common_word, most_common_count = word_frequencies.most_common(1)[0]
+print(f"The most frequent word is '{most_common_word}' and it appears {most_common_count} times.")
+
+# Prepare data for visualization (top 10 words by frequency)
+top_words = word_frequencies.most_common(30)
+df_top_words = pd.DataFrame(top_words, columns=["word", "count"])
+
+# Create a bar chart using Altair
+chart = alt.Chart(df_top_words).mark_bar().encode(
+    x=alt.X("word", sort="-y", title="Words"),
+    y=alt.Y("count", title="Frequency"),
+    color=alt.Color("word", legend=None)
+).properties(
+    title="Top 10 Most Frequent Words",
+    width=400,
+    height=300
+)
+
+chart
+
+```
+
+
+
+I also make a text analysis on the car accident in Washington DC. I extract news articles for DC car accident from https://www.fox5dc.com/tag/traffic. It follows the same logic when scraping the news articles for Chicago car crashes.
+```{python}
+import requests
+from bs4 import BeautifulSoup
+from urllib.parse import urljoin
+
+# File to save the extracted articles
+output_file = "car_crash_dc.txt"
+
+# List of URLs to scrape
+urls = [
+    "https://www.fox5dc.com/tag/traffic?page=1",
+    "https://www.fox5dc.com/tag/traffic?page=2",
+    "https://www.fox5dc.com/tag/traffic?page=3",
+    "https://www.fox5dc.com/tag/traffic?page=4",
+    "https://www.fox5dc.com/tag/traffic?page=5"
+]
+
+# Open the file in write mode to save articles from multiple pages
+with open(output_file, "w", encoding="utf-8") as file:
+    total_articles_extracted = 0
+
+    for main_page_url in urls:
+        # Stop if we have already extracted 100 articles
+        if total_articles_extracted >= 100:
+            print("Extracted 100 articles, stopping...")
+            break
+        
+        print(f"Processing {main_page_url}")
+        
+        # Fetch and parse the main page
+        response = requests.get(main_page_url)
+        if response.status_code == 200:
+            soup = BeautifulSoup(response.text, 'html.parser')
+            
+            # Locate articles on the main page
+            articles = soup.find_all('article', class_='article')  # Finding all articles with 'article' class
+            if not articles:
+                print(f"No articles found on {main_page_url}")
+                continue
+
+            print(f"Found {len(articles)} articles on {main_page_url}")
+            
+            # Process each article on the page
+            for article in articles:
+                # Stop after extracting 100 articles
+                if total_articles_extracted >= 100:
+                    print("Extracted 100 articles, stopping...")
+                    break
+
+                # Extract the title and link
+                a_tag = article.find('a')
+                if not a_tag or 'href' not in a_tag.attrs:
+                    continue
+                title = a_tag.text.strip()
+                link = urljoin(main_page_url, a_tag['href'])
+                
+                # Extract the description
+                description_tag = article.find('p', class_='dek')
+                description = description_tag.text.strip() if description_tag else "Description not found"
+                
+                # Extract the publication time
+                time_tag = article.find('time', class_='time')
+                if time_tag:
+                    publication_time_text = time_tag.get_text(strip=True)  # Extracts visible text
+                else:
+                    publication_time_text = "Time not found"
+
+                # Fetch the full article content
+                try:
+                    article_response = requests.get(link)
+                    if article_response.status_code == 200:
+                        article_soup = BeautifulSoup(article_response.text, 'html.parser')
+                        
+                        # Extract the main content from <div class="article-body">
+                        content_section = article_soup.find('div', class_='article-body')
+                        if content_section:
+                            content = "\n".join([p.text.strip() for p in content_section.find_all('p')])
+                        else:
+                            content = "Content not found."
+                    else:
+                        print(f"Failed to fetch article: {link}")
+                        content = "Failed to retrieve article."
+                        publication_time_text = "Failed to retrieve time."
+
+                except requests.exceptions.RequestException as e:
+                    print(f"Error fetching article {link}: {e}")
+                    content = "Error fetching article."
+                    publication_time_text = "Error fetching time."
+
+                # Write article details to the file
+                file.write(f"Title: {title}\n")
+                file.write(f"Link: {link}\n")
+                file.write(f"Description: {description}\n")
+                file.write(f"Publication Time (Text): {publication_time_text}\n")
+                file.write("\nFull Article:\n")
+                file.write(content)
+                file.write("\n" + "-" * 80 + "\n\n")
+                
+                # Increment the counter
+                total_articles_extracted += 1
+
+                # Check if 100 articles are extracted
+                if total_articles_extracted >= 100:
+                    print("Extracted 100 articles, stopping...")
+                    break
+
+        else:
+            print(f"Failed to fetch the main page {main_page_url}. Status code: {response.status_code}")
+
+        # Check if we have reached the desired number of articles
+        if total_articles_extracted >= 100:
+            break
+
+    print(f"Extracted {total_articles_extracted} articles. Saved to '{output_file}'.")
+
+```
+
+```{python}
+with open("car_crash_dc.txt", "r") as file:
+    car_crash_dc_text = file.read()
+
+doc_accident = nlp(car_crash_dc_text)
+print(f"Polarity: {doc_accident._.blob.polarity:.2f}")
+print(f"Subjectivity: {doc_accident._.blob.subjectivity:.2f}")
+
+import pandas as pd
+import altair as alt
+
+accident_sentence_polarities = []
+for i, sentence in enumerate(doc_accident.sents):
+    polarity = sentence._.blob.polarity
+    accident_sentence_polarities.append({"n": i + 1, "crash_polarity": polarity})
+df_trump = pd.DataFrame(accident_sentence_polarities)
+
+chart1 = alt.Chart(df_trump).mark_line().encode(
+    x = alt.X('n', title = 'Sentence Number'),
+    y = alt.Y('crash_polarity', title = "Polarity")
+).properties(
+    title = "Car Crash in DC",
+    width = 400,
+    height = 100
+)
+
+chart1
+```
